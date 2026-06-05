@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RC Filter Simulator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0d14;
+      --panel: #0f1420;
+      --border: #1e2d4a;
+      --accent: #00e5ff;
+      --accent2: #ff6b35;
+      --accent3: #00ff99;
+      --grid: rgba(0, 229, 255, 0.06);
+      --text: #c8d8e8;
+      --label: #5a7a9a;
+      --glow: 0 0 20px rgba(0, 229, 255, 0.3);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Share Tech Mono', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+      background-image:
+        linear-gradient(var(--grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+    header { text-align: center; margin-bottom: 2.5rem; }
+    header h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(1.6rem, 4vw, 2.8rem);
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+      text-shadow: 0 0 30px rgba(0, 229, 255, 0.5);
+      text-transform: uppercase;
+    }
+    header p {
+      margin-top: 0.5rem;
+      color: var(--label);
+      font-size: 0.8rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+    .main-layout {
+      width: 100%;
+      max-width: 1200px;
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 1.5rem;
+      align-items: start;
+    }
+    .controls {
+      grid-column: 1;
+      grid-row: 1;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.4rem;
+    }
+    .chart-area {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .control-group label {
+      display: block;
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      color: var(--label);
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+    .control-group .value-display {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--accent);
+      text-shadow: var(--glow);
+      margin-bottom: 0.3rem;
+      line-height: 1;
+    }
+    .cap-secondary {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--accent2);
+      min-height: 1.1em;
+      margin-bottom: 0.3rem;
+    }
+    .control-group .unit {
+      font-size: 0.75rem;
+      color: var(--label);
+      margin-left: 4px;
+    }
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 10px rgba(0,229,255,0.6);
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.3); }
+    input[type="range"]::-moz-range-thumb {
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 10px rgba(0,229,255,0.6);
+      border: none; cursor: pointer;
+    }
+    .range-limits {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.65rem;
+      color: var(--label);
+      margin-top: 4px;
+      opacity: 0.6;
+    }
+    .filter-toggle {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+    }
+    .filter-btn {
+      padding: 0.6rem;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--label);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: center;
+    }
+    .filter-btn.active {
+      background: rgba(0,229,255,0.1);
+      border-color: rgba(0,229,255,0.5);
+      color: var(--accent);
+    }
+    .divider { border: none; border-top: 1px solid var(--border); }
+
+    /* Worked calculation display */
+    .fc-calc {
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+      padding: 0.8rem;
+      background: rgba(0,229,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+    }
+    .fc-calc-title {
+      font-size: 0.62rem;
+      letter-spacing: 0.18em;
+      color: var(--label);
+      text-transform: uppercase;
+      margin-bottom: 0.2rem;
+    }
+    .fc-calc-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--text);
+      flex-wrap: wrap;
+    }
+    .fc-calc-lhs {
+      color: var(--label);
+      font-size: 0.75rem;
+      min-width: 2.2rem;
+    }
+    .fc-fraction { display: none; } /* unused */
+
+    .fc-values {
+      color: var(--accent2);
+      font-size: 0.8rem;
+    }
+
+    .fc-result {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--accent2);
+    }
+
+    .chart-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .chart-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      color: var(--label);
+      text-transform: uppercase;
+    }
+    .badge-row { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+    .badge {
+      font-size: 0.65rem;
+      padding: 3px 8px;
+      border-radius: 2px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .badge-cyan {
+      background: rgba(0,229,255,0.1);
+      border: 1px solid rgba(0,229,255,0.3);
+      color: var(--accent);
+    }
+    .badge-orange {
+      background: rgba(255,107,53,0.1);
+      border: 1px solid rgba(255,107,53,0.3);
+      color: var(--accent2);
+    }
+    canvas { width: 100%; border-radius: 2px; display: block; }
+
+    /* Frequency probe slider */
+    .probe-row {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      padding: 0 0;
+      position: relative;
+    }
+    .probe-freq-label {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.7rem;
+      color: var(--accent3);
+      letter-spacing: 0.1em;
+      min-height: 1.2em;
+      text-align: center;
+    }
+    #probeSlider {
+      width: 100%;
+      height: 4px;
+      background: rgba(0,255,153,0.2);
+      border-radius: 2px;
+      accent-color: #00ff99;
+    }
+    #probeSlider::-webkit-slider-thumb {
+      background: #00ff99;
+      box-shadow: 0 0 8px rgba(0,255,153,0.8);
+    }
+
+    footer {
+      margin-top: 2rem;
+      font-size: 0.65rem;
+      color: var(--label);
+      opacity: 0.6;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    @media (max-width: 700px) {
+      .main-layout { grid-template-columns: 1fr; }
+      .controls { grid-row: auto; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>RC Filter Simulator</h1>
+  <p>Low Pass · High Pass · Frequency Response</p>
+</header>
+
+<div class="main-layout">
+
+  <!-- Controls -->
+  <div class="controls">
+
+    <div class="control-group">
+      <label>Filter Type</label>
+      <div class="filter-toggle">
+        <button class="filter-btn active" id="btnLP" onclick="setFilter('low')">Low Pass</button>
+        <button class="filter-btn" id="btnHP" onclick="setFilter('high')">High Pass</button>
+      </div>
+    </div>
+
+    <div class="control-group">
+      <label>Voltage (Peak to Peak)</label>
+      <div class="value-display" id="volt-val">8<span class="unit">V</span></div>
+      <input type="range" id="volt" min="2" max="14" step="1" value="8">
+      <div class="range-limits"><span>2V</span><span>14V</span></div>
+    </div>
+
+    <div class="control-group">
+      <label>Resistance</label>
+      <div class="value-display" id="res-val">1.0<span class="unit">kΩ</span></div>
+      <input type="range" id="res" min="0" max="49" step="1" value="12">
+      <div class="range-limits"><span>100Ω</span><span>82kΩ</span></div>
+    </div>
+
+    <div class="control-group">
+      <label>Capacitance</label>
+      <div class="value-display" id="cap-val">10<span class="unit">nF</span></div>
+      <div class="cap-secondary" id="cap-secondary"></div>
+      <input type="range" id="cap" min="0" max="49" step="1" value="12">
+      <div class="range-limits"><span>0.1nF</span><span>1200nF</span></div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- Worked fc calculation -->
+    <div class="fc-calc">
+      <div class="fc-calc-title">Cut-off Frequency</div>
+
+      <!-- Line 1: symbolic formula -->
+      <div class="fc-calc-row">
+        <span class="fc-calc-lhs">fc =</span>
+        <span>1 / (2π R C)</span>
+      </div>
+
+      <!-- Line 2: with values -->
+      <div class="fc-calc-row">
+        <span class="fc-calc-lhs">fc =</span>
+        <span class="fc-values" id="calc-den">1 / (2π × … × …)</span>
+      </div>
+
+      <!-- Line 3: result -->
+      <div class="fc-calc-row">
+        <span class="fc-calc-lhs">fc =</span>
+        <span class="fc-result" id="calc-result">—</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Right column -->
+  <div style="display:flex; flex-direction:column; gap:1.5rem; grid-column:2; grid-row:1;">
+
+  <!-- Voltage response chart -->
+  <div class="chart-area">
+    <div class="chart-header">
+      <div class="chart-title">Output Voltage vs Frequency</div>
+      <div class="badge-row">
+        <span class="badge badge-cyan" id="badge-filter">Low Pass</span>
+        <span class="badge badge-orange" id="badge-fc">fc = —</span>
+      </div>
+    </div>
+    <canvas id="voltCanvas" height="240"></canvas>
+  </div>
+
+  <!-- Probe slider between graphs -->
+  <div class="chart-area" style="padding: 0.4rem 1.5rem; background: transparent; border-color: rgba(0,255,153,0.15);">
+    <div class="probe-row">
+      <div class="probe-freq-label" id="probe-label">▲ Probe: move slider to read frequency ▲</div>
+      <input type="range" id="probeSlider" min="0" max="1000" step="1" value="500"
+             style="-webkit-appearance:none; appearance:none; width:100%; height:6px; border-radius:3px; outline:none; cursor:pointer;">
+      <div style="font-size:0.6rem; color:var(--label); opacity:0.5; letter-spacing:0.1em; margin-top:2px;">FREQUENCY PROBE</div>
+    </div>
+  </div>
+
+  <!-- dB Bode chart -->
+  <div class="chart-area">
+    <div class="chart-header">
+      <div class="chart-title">Gain (dB) vs Frequency</div>
+    </div>
+    <canvas id="bodeCanvas" height="240"></canvas>
+  </div>
+
+  </div>
+
+</div>
+
+<footer>
+  <div>HTML code authored by Claude (Anthropic) · claude.ai</div>
+  <div>Special thanks to Don A, whose expertise and generosity have supported the creation of this simulator</div>
+  <div style="margin-top:0.3rem;">Barry Duncan · RC Filter Simulator</div>
+</footer>
+
+<script>
+  // ── E12 lookup tables ─────────────────────────────────────────────────────
+
+  const E12_RES = (() => {
+    const base = [100,120,150,180,220,270,330,390,470,560,680,820];
+    const vals = [];
+    for (let decade = 0; decade < 5; decade++) {
+      const mult = Math.pow(10, decade);
+      for (const b of base) {
+        if (vals.length < 50) vals.push(b * mult);
+      }
+    }
+    return vals; // 50 values: 100Ω … 82kΩ
+  })();
+
+  const E12_CAP = (() => {
+    const base = [0.1,0.12,0.15,0.18,0.22,0.27,0.33,0.39,0.47,0.56,0.68,0.82,
+                  1,1.2,1.5,1.8,2.2,2.7,3.3,3.9,4.7,5.6,6.8,8.2,
+                  10,12,15,18,22,27,33,39,47,56,68,82,
+                  100,120,150,180,220,270,330,390,470,560,680,820,1000,1200];
+    return base; // 50 values in nF: 0.1nF … 1200nF
+  })();
+
+  // ── Canvas refs ───────────────────────────────────────────────────────────
+  const voltCanvas    = document.getElementById('voltCanvas');
+  const voltCtx       = voltCanvas.getContext('2d');
+  const bodeCanvas    = document.getElementById('bodeCanvas');
+  const bodeCtx       = bodeCanvas.getContext('2d');
+
+  const voltSlider  = document.getElementById('volt');
+  const resSlider   = document.getElementById('res');
+  const capSlider   = document.getElementById('cap');
+  const probeSlider = document.getElementById('probeSlider');
+
+  const voltVal    = document.getElementById('volt-val');
+  const resVal     = document.getElementById('res-val');
+  const capVal     = document.getElementById('cap-val');
+  const capSec     = document.getElementById('cap-secondary');
+
+  const PAD_LEFT   = 58;
+  const PAD_RIGHT  = 24;
+  const PAD_TOP    = 16;
+  const PAD_BOTTOM = 38;
+
+  let filterType = 'low';
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  function setFilter(type) {
+    filterType = type;
+    document.getElementById('btnLP').classList.toggle('active', type === 'low');
+    document.getElementById('btnHP').classList.toggle('active', type === 'high');
+    update();
+  }
+
+  function getR()   { return E12_RES[parseInt(resSlider.value)]; }
+  function getCapNF(){ return E12_CAP[parseInt(capSlider.value)]; }
+
+  function getParams() {
+    const Vpp = parseFloat(voltSlider.value);
+    const R   = getR();
+    const cnF = getCapNF();
+    const C   = cnF * 1e-9;
+    const fc  = 1 / (2 * Math.PI * R * C);
+    const tau = R * C;
+    return { Vpp, R, C, cnF, fc, tau };
+  }
+
+  function formatFreq(f) {
+    if (f >= 1e6) return (f/1e6).toFixed(2) + ' MHz';
+    if (f >= 1e3) return (f/1e3).toFixed(2) + ' kHz';
+    return f.toFixed(2) + ' Hz';
+  }
+
+  function formatR(R) {
+    return R >= 1000 ? `${(R/1000).toFixed(R%1000===0?0:1)}kΩ` : `${R}Ω`;
+  }
+
+  function formatCapNF(nf) {
+    return nf < 1 ? nf.toFixed(2) + 'nF' : nf >= 1000 ? nf.toFixed(0) + 'nF' : nf % 1 === 0 ? nf.toFixed(0) + 'nF' : nf.toFixed(1) + 'nF';
+  }
+
+  // ── Axis range (dynamic, centred on fc) ───────────────────────────────────
+
+  function getLogRange(fc) {
+    const logFc   = Math.log10(fc);
+    const logFmin = logFc - 2.5;
+    const logFmax = logFc + 2.5;
+    return { logFmin, logFmax, logFc };
+  }
+
+  // ── Gain at frequency f ───────────────────────────────────────────────────
+
+  function gainAt(f, fc) {
+    const ratio = (2 * Math.PI * f) / (2 * Math.PI * fc);
+    if (filterType === 'low')  return 1 / Math.sqrt(1 + ratio * ratio);
+    return ratio / Math.sqrt(1 + ratio * ratio);
+  }
+
+  // ── Probe position → frequency ────────────────────────────────────────────
+
+  function probeFreq(fc) {
+    const { logFmin, logFmax } = getLogRange(fc);
+    const t = parseInt(probeSlider.value) / 1000;
+    return Math.pow(10, logFmin + t * (logFmax - logFmin));
+  }
+
+  // ── Draw voltage response graph ───────────────────────────────────────────
+
+  function drawVolt() {
+    const dpr   = window.devicePixelRatio || 1;
+    const fullW = voltCanvas.width  / dpr;
+    const fullH = voltCanvas.height / dpr;
+    const plotW = fullW - PAD_LEFT - PAD_RIGHT;
+    const plotH = fullH - PAD_TOP  - PAD_BOTTOM;
+
+    const { Vpp, fc } = getParams();
+    const { logFmin, logFmax, logFc } = getLogRange(fc);
+    const Vmax = Vpp; // display peak-to-peak
+
+    voltCtx.clearRect(0, 0, fullW, fullH);
+    voltCtx.save();
+    voltCtx.translate(PAD_LEFT, PAD_TOP);
+
+    function vToY(v)  { return plotH * (1 - v / (Vmax * 1.15)); }
+    function lfToX(lf){ return plotW * (lf - logFmin) / (logFmax - logFmin); }
+
+    // Horizontal grid lines (voltage) — Vpp scale
+    const vTicks = [0, 0.25, 0.5, 0.75, 1.0].map(t => parseFloat((t * Vmax).toFixed(4)));
+    voltCtx.font = '9px Share Tech Mono';
+    voltCtx.textAlign = 'right';
+    vTicks.forEach(v => {
+      const y = vToY(v);
+      voltCtx.strokeStyle = v === 0 ? 'rgba(0,229,255,0.12)' : 'rgba(30,45,74,0.8)';
+      voltCtx.lineWidth = 1;
+      voltCtx.beginPath(); voltCtx.moveTo(0,y); voltCtx.lineTo(plotW,y); voltCtx.stroke();
+      const lbl = v === 0 ? '0' : v < 1 ? v.toFixed(2) : v.toFixed(1);
+      voltCtx.fillStyle = 'rgba(200,220,240,0.7)';
+      voltCtx.fillText(lbl + 'V', -4, y + 3);
+    });
+
+    // Vertical grid lines (decades)
+    voltCtx.textAlign = 'center';
+    for (let lf = Math.ceil(logFmin); lf <= Math.floor(logFmax); lf++) {
+      const x = lfToX(lf);
+      voltCtx.strokeStyle = 'rgba(30,45,74,0.8)';
+      voltCtx.lineWidth = 1;
+      voltCtx.beginPath(); voltCtx.moveTo(x,0); voltCtx.lineTo(x,plotH); voltCtx.stroke();
+      voltCtx.fillStyle = 'rgba(200,220,240,0.7)';
+      voltCtx.font = '9px Share Tech Mono';
+      voltCtx.fillText(formatFreq(Math.pow(10,lf)), x, plotH + 14);
+    }
+
+    // Response curve — output Vpp = gain * input Vpp
+    const samples = plotW * 2;
+    ['glow','sharp'].forEach(pass => {
+      voltCtx.shadowColor = pass === 'glow' ? 'rgba(0,229,255,0.5)' : 'transparent';
+      voltCtx.shadowBlur  = pass === 'glow' ? 8 : 0;
+      voltCtx.strokeStyle = pass === 'glow' ? 'rgba(0,229,255,0.3)' : '#00e5ff';
+      voltCtx.lineWidth   = pass === 'glow' ? 4 : 2;
+      voltCtx.beginPath();
+      for (let px = 0; px < samples; px++) {
+        const lf = logFmin + (px/samples) * (logFmax - logFmin);
+        const f  = Math.pow(10, lf);
+        const v  = gainAt(f, fc) * Vmax;
+        const x  = lfToX(lf);
+        const y  = vToY(v);
+        if (px === 0) voltCtx.moveTo(x,y); else voltCtx.lineTo(x,y);
+      }
+      voltCtx.stroke();
+    });
+    voltCtx.shadowBlur = 0;
+
+    // fc marker
+    const fcX = lfToX(logFc);
+    const fcV = gainAt(fc, fc) * Vmax;
+    const fcY = vToY(fcV);
+    voltCtx.strokeStyle = 'rgba(255,107,53,0.7)';
+    voltCtx.lineWidth = 1.5;
+    voltCtx.setLineDash([4,4]);
+    voltCtx.beginPath(); voltCtx.moveTo(fcX,0); voltCtx.lineTo(fcX,plotH); voltCtx.stroke();
+    voltCtx.setLineDash([]);
+    voltCtx.fillStyle = '#ff6b35';
+    voltCtx.shadowColor = 'rgba(255,107,53,0.8)'; voltCtx.shadowBlur = 10;
+    voltCtx.beginPath(); voltCtx.arc(fcX, fcY, 5, 0, Math.PI*2); voltCtx.fill();
+    voltCtx.shadowBlur = 0;
+    voltCtx.fillStyle = 'rgba(255,107,53,0.9)';
+    voltCtx.font = '10px Share Tech Mono';
+    voltCtx.textAlign = fcX > plotW*0.7 ? 'right' : 'left';
+    const lo = fcX > plotW*0.7 ? -8 : 8;
+    voltCtx.fillText(`fc = ${formatFreq(fc)}`, fcX+lo, fcY-10);
+
+    // Probe line
+    const pf  = probeFreq(fc);
+    const pfX = lfToX(Math.log10(pf));
+    if (pfX >= 0 && pfX <= plotW) {
+      const pv  = gainAt(pf, fc) * Vmax;
+      const pfY = vToY(pv);
+
+      // Vertical dashed green line
+      voltCtx.strokeStyle = 'rgba(0,255,153,0.7)';
+      voltCtx.lineWidth = 1.5;
+      voltCtx.setLineDash([4,4]);
+      voltCtx.beginPath(); voltCtx.moveTo(pfX, 0); voltCtx.lineTo(pfX, plotH); voltCtx.stroke();
+      voltCtx.setLineDash([]);
+
+      // Horizontal readoff line
+      voltCtx.strokeStyle = 'rgba(0,255,153,0.5)';
+      voltCtx.lineWidth = 1;
+      voltCtx.setLineDash([3,3]);
+      voltCtx.beginPath(); voltCtx.moveTo(0, pfY); voltCtx.lineTo(pfX, pfY); voltCtx.stroke();
+      voltCtx.setLineDash([]);
+
+      // Dot at intersection
+      voltCtx.fillStyle = '#00ff99';
+      voltCtx.shadowColor = 'rgba(0,255,153,0.8)'; voltCtx.shadowBlur = 8;
+      voltCtx.beginPath(); voltCtx.arc(pfX, pfY, 4, 0, Math.PI*2); voltCtx.fill();
+      voltCtx.shadowBlur = 0;
+
+      // Change 3: smart Y-axis label placement — left of axis normally,
+      // but move right of axis if it would clash with a grid tick label
+      const vlbl = (pv < 1 ? pv.toFixed(3) : pv.toFixed(2)) + 'V';
+      const gridYs = vTicks.map(v => vToY(v));
+      const tooClose = gridYs.some(gy => Math.abs(gy - pfY) < 10);
+      voltCtx.fillStyle = '#00ff99';
+      voltCtx.font = '9px Share Tech Mono';
+      if (tooClose) {
+        voltCtx.textAlign = 'left';
+        voltCtx.fillText(vlbl, 4, pfY - 5);
+      } else {
+        voltCtx.textAlign = 'right';
+        voltCtx.fillText(vlbl, -3, pfY + 3);
+      }
+
+      // Frequency label at bottom of vertical line
+      voltCtx.fillStyle = 'rgba(0,255,153,0.85)';
+      voltCtx.textAlign = pfX > plotW*0.7 ? 'right' : 'left';
+      voltCtx.fillText(formatFreq(pf), pfX + (pfX > plotW*0.7 ? -4 : 4), plotH + 27);
+    }
+
+    // Axes
+    voltCtx.strokeStyle = 'rgba(0,229,255,0.3)';
+    voltCtx.lineWidth = 1.5;
+    voltCtx.beginPath();
+    voltCtx.moveTo(0,0); voltCtx.lineTo(0,plotH); voltCtx.lineTo(plotW,plotH);
+    voltCtx.stroke();
+
+    // Y axis title
+    voltCtx.save();
+    voltCtx.translate(-44, plotH/2);
+    voltCtx.rotate(-Math.PI/2);
+    voltCtx.fillStyle = 'rgba(200,220,240,0.5)';
+    voltCtx.font = '9px Share Tech Mono';
+    voltCtx.textAlign = 'center';
+    voltCtx.fillText('OUTPUT VOLTAGE (V)', 0, 0);
+    voltCtx.restore();
+
+    voltCtx.restore();
+  }
+
+  // ── Draw dB Bode plot ─────────────────────────────────────────────────────
+
+  function drawBode() {
+    const dpr   = window.devicePixelRatio || 1;
+    const fullW = bodeCanvas.width  / dpr;
+    const fullH = bodeCanvas.height / dpr;
+    const plotW = fullW - PAD_LEFT - PAD_RIGHT;
+    const plotH = fullH - PAD_TOP  - PAD_BOTTOM;
+
+    const { fc } = getParams();
+    const { logFmin, logFmax, logFc } = getLogRange(fc);
+
+    bodeCtx.clearRect(0, 0, fullW, fullH);
+    bodeCtx.save();
+    bodeCtx.translate(PAD_LEFT, PAD_TOP);
+
+    const dbMin = -60, dbMax = 6, dbRange = dbMax - dbMin;
+    function dbToY(db)  { return plotH * (1 - (db - dbMin) / dbRange); }
+    function lfToX(lf)  { return plotW * (lf - logFmin) / (logFmax - logFmin); }
+
+    // Horizontal grid lines (dB) — no -20dB annotation text
+    const dbTicks = [6, 0, -3, -10, -40, -60];
+    bodeCtx.font = '9px Share Tech Mono';
+    bodeCtx.textAlign = 'right';
+    dbTicks.forEach(db => {
+      const y = dbToY(db);
+      bodeCtx.strokeStyle = db === 0
+        ? 'rgba(0,229,255,0.15)'
+        : db === -3 ? 'rgba(255,107,53,0.25)' : 'rgba(30,45,74,0.8)';
+      bodeCtx.lineWidth = (db === 0 || db === -3) ? 1.5 : 1;
+      bodeCtx.beginPath(); bodeCtx.moveTo(0,y); bodeCtx.lineTo(plotW,y); bodeCtx.stroke();
+      bodeCtx.fillStyle = db === -3 ? 'rgba(255,107,53,0.8)' : 'rgba(200,220,240,0.7)';
+      bodeCtx.fillText(`${db}dB`, -4, y + 3);
+    });
+
+    // Vertical grid lines
+    bodeCtx.textAlign = 'center';
+    for (let lf = Math.ceil(logFmin); lf <= Math.floor(logFmax); lf++) {
+      const x = lfToX(lf);
+      bodeCtx.strokeStyle = 'rgba(30,45,74,0.8)';
+      bodeCtx.lineWidth = 1;
+      bodeCtx.beginPath(); bodeCtx.moveTo(x,0); bodeCtx.lineTo(x,plotH); bodeCtx.stroke();
+      bodeCtx.fillStyle = 'rgba(200,220,240,0.7)';
+      bodeCtx.font = '9px Share Tech Mono';
+      bodeCtx.fillText(formatFreq(Math.pow(10,lf)), x, plotH + 14);
+    }
+
+    // Response curve
+    const samples = plotW * 2;
+    ['glow','sharp'].forEach(pass => {
+      bodeCtx.shadowColor = pass === 'glow' ? 'rgba(0,229,255,0.5)' : 'transparent';
+      bodeCtx.shadowBlur  = pass === 'glow' ? 8 : 0;
+      bodeCtx.strokeStyle = pass === 'glow' ? 'rgba(0,229,255,0.3)' : '#00e5ff';
+      bodeCtx.lineWidth   = pass === 'glow' ? 4 : 2;
+      bodeCtx.beginPath();
+      for (let px = 0; px < samples; px++) {
+        const lf = logFmin + (px/samples)*(logFmax-logFmin);
+        const f  = Math.pow(10, lf);
+        const db = 20 * Math.log10(Math.max(gainAt(f, fc), 1e-10));
+        const x  = lfToX(lf);
+        const y  = dbToY(db);
+        if (px === 0) bodeCtx.moveTo(x,y); else bodeCtx.lineTo(x,y);
+      }
+      bodeCtx.stroke();
+    });
+    bodeCtx.shadowBlur = 0;
+
+    // fc marker
+    const fcX = lfToX(logFc);
+    const fcY = dbToY(-3);
+    bodeCtx.strokeStyle = 'rgba(255,107,53,0.7)';
+    bodeCtx.lineWidth = 1.5;
+    bodeCtx.setLineDash([4,4]);
+    bodeCtx.beginPath(); bodeCtx.moveTo(fcX,0); bodeCtx.lineTo(fcX,plotH); bodeCtx.stroke();
+    bodeCtx.setLineDash([]);
+    bodeCtx.fillStyle = '#ff6b35';
+    bodeCtx.shadowColor = 'rgba(255,107,53,0.8)'; bodeCtx.shadowBlur = 10;
+    bodeCtx.beginPath(); bodeCtx.arc(fcX, fcY, 5, 0, Math.PI*2); bodeCtx.fill();
+    bodeCtx.shadowBlur = 0;
+    bodeCtx.fillStyle = 'rgba(255,107,53,0.9)';
+    bodeCtx.font = '10px Share Tech Mono';
+    bodeCtx.textAlign = fcX > plotW*0.7 ? 'right' : 'left';
+    const lo = fcX > plotW*0.7 ? -8 : 8;
+    bodeCtx.fillText(`fc = ${formatFreq(fc)}`, fcX+lo, fcY-10);
+    bodeCtx.fillText('−3dB', fcX+lo, fcY+14);
+
+    // Probe line
+    const pf  = probeFreq(fc);
+    const pfX = lfToX(Math.log10(pf));
+    if (pfX >= 0 && pfX <= plotW) {
+      const pdb  = 20 * Math.log10(Math.max(gainAt(pf, fc), 1e-10));
+      const pfY  = dbToY(pdb);
+
+      bodeCtx.strokeStyle = 'rgba(0,255,153,0.7)';
+      bodeCtx.lineWidth = 1.5;
+      bodeCtx.setLineDash([4,4]);
+      bodeCtx.beginPath(); bodeCtx.moveTo(pfX,0); bodeCtx.lineTo(pfX,plotH); bodeCtx.stroke();
+      bodeCtx.setLineDash([]);
+
+      bodeCtx.strokeStyle = 'rgba(0,255,153,0.5)';
+      bodeCtx.lineWidth = 1;
+      bodeCtx.setLineDash([3,3]);
+      bodeCtx.beginPath(); bodeCtx.moveTo(0, pfY); bodeCtx.lineTo(pfX, pfY); bodeCtx.stroke();
+      bodeCtx.setLineDash([]);
+
+      bodeCtx.fillStyle = '#00ff99';
+      bodeCtx.shadowColor = 'rgba(0,255,153,0.8)'; bodeCtx.shadowBlur = 8;
+      bodeCtx.beginPath(); bodeCtx.arc(pfX, pfY, 4, 0, Math.PI*2); bodeCtx.fill();
+      bodeCtx.shadowBlur = 0;
+
+      // Change 3: smart placement — left of axis unless clashing with a dB tick
+      const dbTickYs = [6, 0, -3, -10, -40, -60].map(db => dbToY(db));
+      const tooCloseDB = dbTickYs.some(gy => Math.abs(gy - pfY) < 10);
+      bodeCtx.fillStyle = '#00ff99';
+      bodeCtx.font = '9px Share Tech Mono';
+      if (tooCloseDB) {
+        bodeCtx.textAlign = 'left';
+        bodeCtx.fillText(pdb.toFixed(1) + 'dB', 4, pfY - 5);
+      } else {
+        bodeCtx.textAlign = 'right';
+        bodeCtx.fillText(pdb.toFixed(1) + 'dB', -3, pfY + 3);
+      }
+
+      bodeCtx.fillStyle = 'rgba(0,255,153,0.85)';
+      bodeCtx.textAlign = pfX > plotW*0.7 ? 'right' : 'left';
+      bodeCtx.fillText(formatFreq(pf), pfX + (pfX > plotW*0.7 ? -4 : 4), plotH + 27);
+    }
+
+    // Axes
+    bodeCtx.strokeStyle = 'rgba(0,229,255,0.3)';
+    bodeCtx.lineWidth = 1.5;
+    bodeCtx.beginPath();
+    bodeCtx.moveTo(0,0); bodeCtx.lineTo(0,plotH); bodeCtx.lineTo(plotW,plotH);
+    bodeCtx.stroke();
+
+    bodeCtx.restore();
+
+    // Y axis title
+    bodeCtx.save();
+    bodeCtx.translate(12, PAD_TOP + plotH/2);
+    bodeCtx.rotate(-Math.PI/2);
+    bodeCtx.fillStyle = 'rgba(200,220,240,0.5)';
+    bodeCtx.font = '9px Share Tech Mono';
+    bodeCtx.textAlign = 'center';
+    bodeCtx.fillText('GAIN (dB)', 0, 0);
+    bodeCtx.restore();
+  }
+
+  // ── Resize canvases ───────────────────────────────────────────────────────
+
+  function resizeCanvases() {
+    const dpr = window.devicePixelRatio || 1;
+
+    [voltCanvas, bodeCanvas].forEach(cv => {
+      const rb = cv.parentElement.getBoundingClientRect();
+      cv.width  = rb.width * dpr;
+      cv.height = 240 * dpr;
+      cv.style.height = '240px';
+      cv.getContext('2d').scale(dpr, dpr);
+    });
+
+  }
+
+  // ── Update ────────────────────────────────────────────────────────────────
+
+  function update() {
+    const { Vpp, R, cnF, fc, tau } = getParams();
+
+    // Resistance display
+    resVal.innerHTML = R >= 1000
+      ? `${(R/1000).toFixed(R%1000===0?0:1)}<span class="unit">kΩ</span>`
+      : `${R}<span class="unit">Ω</span>`;
+
+    // Capacitance display
+    const capNF = cnF;
+    let mainStr = '';
+    if (capNF < 1)        mainStr = capNF.toFixed(2) + '<span class="unit">nF</span>';
+    else if (capNF < 10)  mainStr = capNF.toFixed(1) + '<span class="unit">nF</span>';
+    else                  mainStr = capNF.toFixed(0) + '<span class="unit">nF</span>';
+    capVal.innerHTML = mainStr;
+
+    // Secondary unit display
+    if (capNF < 1) {
+      capSec.textContent = `(${(capNF * 1000).toFixed(0)}pF)`;
+    } else if (capNF > 820) {
+      const uF = capNF / 1000;
+      capSec.textContent = `(${uF % 1 === 0 ? uF.toFixed(0) : uF.toFixed(1)}µF)`;
+    } else {
+      capSec.textContent = '';
+    }
+
+    // Voltage display
+    voltVal.innerHTML = `${Vpp}<span class="unit">V</span>`;
+
+    // Worked calculation
+    const rStr = formatR(R);
+    const cStr = formatCapNF(cnF) + ' = ' + (cnF * 1e-9).toExponential(2) + 'F';
+    document.getElementById('calc-den').textContent = `1 / (2π × ${formatR(R)} × ${formatCapNF(cnF)})`;
+    document.getElementById('calc-result').textContent = formatFreq(fc);
+
+    // Badges
+    document.getElementById('badge-filter').textContent = filterType === 'low' ? 'Low Pass' : 'High Pass';
+    document.getElementById('badge-fc').textContent     = `fc = ${formatFreq(fc)}`;
+
+    // Update probe label
+    updateProbeLabel();
+
+    drawVolt();
+    drawBode();
+  }
+
+  function updateProbeLabel() {
+    const { fc } = getParams();
+    const pf = probeFreq(fc);
+    document.getElementById('probe-label').textContent =
+      `▲  Probe: ${formatFreq(pf)}  ▲`;
+  }
+
+  voltSlider.addEventListener('input',  update);
+  resSlider.addEventListener('input',   update);
+  capSlider.addEventListener('input',   update);
+  probeSlider.addEventListener('input', () => {
+    const { fc } = getParams();
+    updateProbeLabel();
+    drawVolt();
+    drawBode();
+  });
+  window.addEventListener('resize', () => { resizeCanvases(); update(); });
+
+  resizeCanvases();
+  update();
+</script>
+</body>
+</html>
