@@ -1382,18 +1382,22 @@ function drawCircuit(){
     });
   }
   const C_VOUT='#ffe600';
-  function drawVout(topY,botY,x){
-    cx.strokeStyle=C_VOUT;cx.lineWidth=1.5;
+  function drawVout(topY,botY,x,col,showLabel){
+    col = col || C_VOUT;
+    showLabel = showLabel!==false;
+    cx.strokeStyle=col;cx.lineWidth=1.5;
     cx.beginPath();cx.arc(x,topY,4,0,Math.PI*2);cx.stroke();
     cx.beginPath();cx.arc(x,botY,4,0,Math.PI*2);cx.stroke();
     const aTop=topY+8,aBot=botY-8;
-    cx.strokeStyle=C_VOUT;cx.lineWidth=1.5;
+    cx.strokeStyle=col;cx.lineWidth=1.5;
     cx.beginPath();cx.moveTo(x,aTop);cx.lineTo(x,aBot);cx.stroke();
-    cx.fillStyle=C_VOUT;
+    cx.fillStyle=col;
     cx.beginPath();cx.moveTo(x,aTop);cx.lineTo(x-4,aTop+8);cx.lineTo(x+4,aTop+8);cx.closePath();cx.fill();
     cx.beginPath();cx.moveTo(x,aBot);cx.lineTo(x-4,aBot-8);cx.lineTo(x+4,aBot-8);cx.closePath();cx.fill();
-    cx.fillStyle=C_VOUT;cx.font='bold 12px Share Tech Mono';cx.textAlign='left';
-    cx.fillText('Vout',x+8,(topY+botY)/2+5);
+    if(showLabel){
+      cx.fillStyle=col;cx.font='bold 12px Share Tech Mono';cx.textAlign='left';
+      cx.fillText('Vout',x+8,(topY+botY)/2+5);
+    }
   }
 
   if(isSeries){
@@ -1434,7 +1438,6 @@ function drawCircuit(){
     cx.fillStyle=C_GREEN;cx.font='9px Share Tech Mono';cx.textAlign='right';
     cx.fillText('I',arX-18,arY+4);
     dot(lx,top,true);dot(lx,bot,true);dot(rx,top,true);dot(rx,bot,true);
-    drawVout(top,bot,rx);
   } else {
     const top=fh*0.12,bot=fh*0.85;
     const lx=46,rx=fw-52,totalW=rx-lx;
@@ -1475,7 +1478,6 @@ function drawCircuit(){
     drawGnd(vsX+36,bot);
     [vsX,rX,lX,cX].forEach(x=>{dot(x,top,true);dot(x,bot,true);});
     dot(rx,top,true);dot(rx,bot,true);
-    drawVout(top,bot,rx);
   }
 }
 
